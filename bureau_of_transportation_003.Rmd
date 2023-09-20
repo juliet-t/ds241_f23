@@ -1,0 +1,204 @@
+---
+title: 'Experiment3: More Airline Data'
+subtitle: 
+date: "2023-09-13"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Packages
+
+```{r}
+library(tidyverse)
+library(nycflights13)
+library(here)
+library(janitor)
+library(ggplot2)
+
+```
+
+# Get data from the online source.
+
+Save the download to your data_raw directory. It will be a zipfile,, but that will be OK. 
+Don't change the name of the zipfile. 
+
+## Load the BOT data 
+
+We take advantage of the 'here' package to get the path to the file that we stored. We also may note that inside the zipfile is a csv file. We will read the csvfile. 
+
+```{r}
+thisfile <- here("data_raw", "DL_SelectFields.zip")
+
+df2022 <- read_csv(thisfile) |> clean_names()
+```
+## Subsetting to data of interesst
+
+Let's focus on flights from La Guardia (airport "LGA") and eliminate cargo flights by requiring at least 1 passanger.
+
+Call the resultant dataframe 'df9'
+
+```{r}
+df9 <- df2022 |> filter(passengers > 0, origin == "LGA")
+```
+
+# Exploring the BOT 2022 data
+
+## Subsetting to data of interest
+
+Let's try to visualize a monthly count of flights using a barchart.
+
+First a not quite right visualization 
+
+```{r}
+df9 |>
+  ggplot((aes(month))) + geom_bar()
+```
+
+By default, 'geom_bar' is counting the number of rows, where we have asked it to visualize the count by 'month'.
+
+** Take a look at the dataset and discover why counting rows is not going to give us a count of filghts. ** 
+```{r}
+df9 |>
+  ggplot (aes(month)) + geom_bar(aes(weight = departures_performed))
+
+```
+Make some observations about this plot.
+
+Observation: 
+
+- The month that has the most departures is March. This is not what I would have expected, as many people travel on their vacations, which usually fall in December or in the summer months. March also has Spring break for college students in it, which may be one cause for the increased departures. The severity COVID-19 over 2022 would have also been a contributing factor the the amount of departures over the year. 
+### A new visualization  
+
+Can you make  boxplot where the bar height is based on the number of passengers riding each month?
+```{r}
+df9 |>
+  ggplot (aes(month)) + geom_bar(aes(weight = passengers))
+```
+Observation:
+
+- low passenger numbers in early 2022 likely due to covid. 
+- It makes sense that July had the largest amount of passengers because it is a usual vacation month. 
+
+
+## Just because you can
+
+Here is pretty, but not so useful plot.
+
+```{r}
+df9 |>
+  ggplot (aes(month, fill = carrier_name)) + geom_bar(aes(weight = departures_performed))
+```
+## Arrivals and departures from LGA
+
+```{r}
+df10 <- df2022 |> filter(passengers > 0, origin == "LGA" | dest == "LGA")
+
+df10 |> ggplot(aes(month)) + geom_bar(aes(weight = passengers))
+```
+```{r}
+df11 <- df10 |>
+  select(month, passengers, seats, carrier_name,dest, origin)
+```
+
+```{r}
+df12 <- df10 |> select(1:5, month, contains("id"))
+```
+
+```{r}
+df13 <- df11 |> mutate(percent_loading = passengers / seats * 100)
+
+df13 |> ggplot(aes(percent_loading)) + 
+  geom_histogram() + facet_wrap(~carrier_name, scales = "free_y")
+```
+```{r}
+```
+
+
+```{r}
+thisfile <- here("data_raw",  "DL_SelectFields_2017.zip")
+df2017 <- read_csv(thisfile) |> clean_names()
+
+thisfile <- here("data_raw",  "DL_SelectFields_2018.zip")
+df2018 <- read_csv(thisfile) |> clean_names()
+
+thisfile <- here("data_raw",  "DL_SelectFields_2019.zip")
+df2019 <- read_csv(thisfile) |> clean_names()
+
+thisfile <- here("data_raw",  "DL_SelectFields_2020.zip")
+df2020 <- read_csv(thisfile) |> clean_names()
+
+thisfile <- here("data_raw",  "DL_SelectFields_2021.zip")
+df2021 <- read_csv(thisfile) |> clean_names()
+
+thisfile <- here("data_raw", "DL_SelectFields_2022.zip")
+df2022 <- read_csv(thisfile) |> clean_names()
+
+thisfile <- here("data_raw", "DL_SelectFields_2023.zip")
+df2023 <- read_csv(thisfile) |> clean_names()
+
+```
+
+```{r}
+dfc=df2017 |>
+  bind_rows(df2018)|>
+  bind_rows(df2019)|>
+  bind_rows(df2020)|>
+  bind_rows(df2021)|>
+  bind_rows(df2022)|>
+  bind_rows(df2023)
+
+```
+
+```{r}
+dfLGA = dfc |>
+  filter(origin == "LGA" | dest == "LGA", passengers > 0)
+
+dfLGA |>
+  ggplot(aes(month)) +
+  geom_bar(aes(weight = passengers)) 
+```
+
+```{r}
+dfLGA |>
+  ggplot(aes(year)) +
+  geom_bar(aes(weight = passengers), fill = "red")
+```
+Drop in passengers at beginning of year (i.e January, February, March)
+Most recent month has the most passengers out of all the months over all the years. 
+
+# Passengers by month from 2017 to 2023
+```{r}
+dfLGA |> 
+  mutate(time_year = year + month / 12) |>
+  ggplot(aes(x = time_year)) + geom_bar(aes(weight = passengers), fill = "purple") 
+
+```
+
+```{r}
+dfLGA |> 
+  mutate(by_month = ym(str_c(year,"-",month))) |>
+  ggplot(aes(x = by_month)) + geom_bar(aes(weight = passengers), fill = "purple") 
+
+```
+
+
+```{r}
+write_csv(dfc, here("data", ))
+```
+
+```{r}
+dfLGA_MIA = dfc |>
+  filter((origin == "LGA" & dest == "MIA") | (origin == "MIA" & dest == "LGA") , passengers > 0) |>
+  mutate(time_year = year + month / 12)
+
+dfLGA_MIA |>
+  ggplot(aes(x = time_year)) + geom_bar(aes(weight = passengers, color = dest), position = 'dodge')
+
+```
+
+```{r}
+dfLGA |>
+  ggplot()
+```
+
