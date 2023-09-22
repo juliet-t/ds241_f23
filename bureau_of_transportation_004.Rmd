@@ -1,0 +1,134 @@
+---
+title: 'Experiment3: More Airline Data'
+subtitle: 
+date: "2023-09-13"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Packages
+
+```{r}
+library(tidyverse)
+library(nycflights13)
+library(here)
+library(janitor)
+library(ggplot2)
+
+```
+
+# Get data from the online source.
+
+Save the download to your data_raw directory. It will be a zipfile,, but that will be OK. 
+Don't change the name of the zipfile. 
+
+## Load the BOT data 
+
+We take advantage of the 'here' package to get the path to the file that we stored. We also may note that inside the zipfile is a csv file. We will read the csvfile. 
+
+```{r}
+thisfile <- here("data_raw", "DL_SelectFields.zip")
+
+df2022 <- read_csv(thisfile) |> clean_names()
+```
+## Subsetting to data of interesst
+
+Load in all BOT data needed
+```{r}
+thisfile <- here("data_raw",  "DL_SelectFields_2017.zip")
+df2017 <- read_csv(thisfile) |> clean_names()
+
+thisfile <- here("data_raw",  "DL_SelectFields_2018.zip")
+df2018 <- read_csv(thisfile) |> clean_names()
+
+thisfile <- here("data_raw",  "DL_SelectFields_2019.zip")
+df2019 <- read_csv(thisfile) |> clean_names()
+
+thisfile <- here("data_raw",  "DL_SelectFields_2020.zip")
+df2020 <- read_csv(thisfile) |> clean_names()
+
+thisfile <- here("data_raw",  "DL_SelectFields_2021.zip")
+df2021 <- read_csv(thisfile) |> clean_names()
+
+thisfile <- here("data_raw", "DL_SelectFields_2022.zip")
+df2022 <- read_csv(thisfile) |> clean_names()
+
+thisfile <- here("data_raw", "DL_SelectFields_2023.zip")
+df2023 <- read_csv(thisfile) |> clean_names()
+
+```
+
+Bind all data from 201-2023 together
+```{r}
+dfc=df2017 |>
+  bind_rows(df2018)|>
+  bind_rows(df2019)|>
+  bind_rows(df2020)|>
+  bind_rows(df2021)|>
+  bind_rows(df2022)|>
+  bind_rows(df2023)
+
+```
+
+```{r}
+dfLGA = dfc |>
+  filter(origin == "LGA" | dest == "LGA", passengers > 0)
+
+dfLGA |>
+  ggplot(aes(month)) +
+  geom_bar(aes(weight = passengers)) 
+```
+
+```{r}
+dfLGA |>
+  ggplot(aes(year)) +
+  geom_bar(aes(weight = passengers), fill = "red")
+```
+Drop in passengers at beginning of year (i.e January, February, March)
+Most recent month has the most passengers out of all the months over all the years. 
+
+# Passengers by month from 2017 to 2023
+```{r}
+dfLGA |> 
+  mutate(time_year = year + month / 12) |>
+  ggplot(aes(x = time_year)) + geom_bar(aes(weight = passengers), fill = "purple") 
+
+```
+
+```{r}
+
+dfLGA_MIA = dfLGA |>
+  mutate(by_month = ym(str_c(year,"-",month))) |> 
+  #ggplot(aes(x = by_month)) + geom_bar(aes(weight = passengers), fill = "purple") 
+  filter(dest == "MIA" | origin == "MIA")|>
+  group_by(origin, by_month) |>
+  summarise(passengers = sum(passengers)) |>
+  mutate(cum_pass = cumsum(passengers)) |> 
+  pivot_wider(names_from = origin, values_from = c("passengers", "cum_pass")) |>
+  mutate(net_to_miami = passengers_LGA - passengers_MIA, cum_to_miami = cum_pass_LGA - cum_pass_MIA)
+
+```
+
+`
+```{r}
+3 + 5
+```
+
+```{r}
+dfLGA_MIA = dfLGA |>
+  filter((origin == "MIA" | dest == "MIA") , passengers > 0) |>
+  mutate(time_year = year + month / 12)
+
+dfLGA_MIA |>
+  group_by(origin, month) |>
+  summarise(total_passengers = sum(passengers)) |>
+  ggplot(aes(x = month, y = total_passengers)) + geom_line()
+
+```
+
+```{r}
+dfLGA |>
+  ggplot()
+```
+

@@ -193,7 +193,7 @@ dfLGA_MIA = dfc |>
   mutate(time_year = year + month / 12)
 
 dfLGA_MIA |>
-  ggplot(aes(x = time_year)) + geom_bar(aes(weight = passengers, color = dest), position = 'dodge')
+  ggplot(aes(x = time_year, y = cumsum(passengers))) + geom_line(aes( color = dest), position = 'dodge')
 
 ```
 
