@@ -96,23 +96,55 @@ dfLGA |>
 
 ```
 
+
+
+
+```{r}
+
+```
+
+A graph that plots a CUMMULATIVE SUM of those monthly totals
+
 ```{r}
 
 dfLGA_MIA = dfLGA |>
   mutate(by_month = ym(str_c(year,"-",month))) |> 
-  #ggplot(aes(x = by_month)) + geom_bar(aes(weight = passengers), fill = "purple") 
   filter(dest == "MIA" | origin == "MIA")|>
   group_by(origin, by_month) |>
   summarise(passengers = sum(passengers)) |>
   mutate(cum_pass = cumsum(passengers)) |> 
   pivot_wider(names_from = origin, values_from = c("passengers", "cum_pass")) |>
-  mutate(net_to_miami = passengers_LGA - passengers_MIA, cum_to_miami = cum_pass_LGA - cum_pass_MIA)
+  mutate(net_to_miami = passengers_LGA - passengers_MIA, cum_to_miami = cum_pass_LGA - cum_pass_MIA) 
 
+ggplot() + geom_line(dfLGA_MIA, mapping = aes(x = by_month, y = cum_pass_LGA), color = "red") + geom_line(dfLGA_MIA, mapping = aes(x = by_month, y = cum_pass_MIA)) 
 ```
+
+
+
+```{r}
+dfLGA_to_MIA = dfLGA |>
+  mutate(by_month = ym(str_c(year,"-",month))) |> 
+  filter(dest == "MIA" & origin == "LGA") |>
+  group_by(origin, dest, by_month) |>
+  summarise(passengers = sum(passengers))
+
+dfMIA_to_LGA = dfLGA |>
+  mutate(by_month = ym(str_c(year,"-",month))) |> 
+  filter(dest == "LGA" & origin == "MIA") |>
+  group_by(origin, dest, by_month) |>
+  summarise(passengers = sum(passengers))
+
+
+
+
+ggplot() + geom_line(dfLGA_to_MIA, mapping = aes(x = by_month, y = passengers, color = "LGA to MIA"), size = 1.2) + geom_line(dfMIA_to_LGA, mapping = aes(x = by_month, y = passengers, color = "MIA to LGA"), size = 1.2) + labs(title = "Flights between LaGuardia Airport and Miami Airport", x = "Passengers", y = "Month") + labs(color = "Flights")
+```
+This graph shows the passengers that flew from LGA to MIA over the months from 2017 to 2023 compared to the amount of passengers that flew from MIA to LGA over the months from 2017 to 2023. 
+
 Going from all of NY to all of FL
 `
 ```{r}
-3 + 5
+
 ```
 
 ```{r}
@@ -125,10 +157,5 @@ dfLGA_MIA |>
   summarise(total_passengers = sum(passengers)) |>
   ggplot(aes(x = month, y = total_passengers)) + geom_line()
 
-```
-
-```{r}
-dfLGA |>
-  ggplot()
-```
+`````
 
