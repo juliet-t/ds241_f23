@@ -59,7 +59,7 @@ df2023 <- read_csv(thisfile) |> clean_names()
 
 ```
 
-Bind all data from 201-2023 together
+Here, we will bind all data from 2017-2023 together
 ```{r}
 dfc=df2017 |>
   bind_rows(df2018)|>
@@ -71,56 +71,45 @@ dfc=df2017 |>
 
 ```
 
+
+
+First, we will narrow the scope of our search to just passenger flights going and coming from the LaGuardia Airport in NYC.  
 ```{r}
 dfLGA = dfc |>
   filter(origin == "LGA" | dest == "LGA", passengers > 0)
+  
+months_date = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
 
 dfLGA |>
   ggplot(aes(month)) +
-  geom_bar(aes(weight = passengers)) 
+  geom_bar(aes(weight = passengers))+ labs(title = "Number of Passengers going to and from LGA over months", x = "Month", y = "Number of Passengers") + scale_x_discrete(labels= months_date)
+
 ```
 
+
+Then, we will break up the passengers by year. Each column represents the number of passengers who flew through LGA that year. 
 ```{r}
 dfLGA |>
   ggplot(aes(year)) +
-  geom_bar(aes(weight = passengers), fill = "red")
+  geom_bar(aes(weight = passengers)) +
+  labs(title = "Number of LGA Passengers over Time (year)", y = "Passengers")
 ```
 Drop in passengers at beginning of year (i.e January, February, March)
 Most recent month has the most passengers out of all the months over all the years. 
 
 # Passengers by month from 2017 to 2023
+
+This graph presents a break-down of the previous graph. Each bar represents the number of passengers that flew in a given month for that year, starting from 2017.
 ```{r}
 dfLGA |> 
   mutate(time_year = year + month / 12) |>
-  ggplot(aes(x = time_year)) + geom_bar(aes(weight = passengers), fill = "purple") 
+  ggplot(aes(x = time_year)) + geom_bar(aes(weight = passengers)) +
+  labs(title = "Number of LGA Passengers over Time (month)", y = "Passengers")
 
 ```
 
 
-
-
-```{r}
-
-```
-
-A graph that plots a CUMMULATIVE SUM of those monthly totals
-
-```{r}
-
-dfLGA_MIA = dfLGA |>
-  mutate(by_month = ym(str_c(year,"-",month))) |> 
-  filter(dest == "MIA" | origin == "MIA")|>
-  group_by(origin, by_month) |>
-  summarise(passengers = sum(passengers)) |>
-  mutate(cum_pass = cumsum(passengers)) |> 
-  pivot_wider(names_from = origin, values_from = c("passengers", "cum_pass")) |>
-  mutate(net_to_miami = passengers_LGA - passengers_MIA, cum_to_miami = cum_pass_LGA - cum_pass_MIA) 
-
-ggplot() + geom_line(dfLGA_MIA, mapping = aes(x = by_month, y = cum_pass_LGA), color = "red") + geom_line(dfLGA_MIA, mapping = aes(x = by_month, y = cum_pass_MIA)) 
-```
-
-
-
+This graph considers the flights between LGA and MIA.
 ```{r}
 dfLGA_to_MIA = dfLGA |>
   mutate(by_month = ym(str_c(year,"-",month))) |> 
@@ -141,21 +130,49 @@ ggplot() + geom_line(dfLGA_to_MIA, mapping = aes(x = by_month, y = passengers, c
 ```
 This graph shows the passengers that flew from LGA to MIA over the months from 2017 to 2023 compared to the amount of passengers that flew from MIA to LGA over the months from 2017 to 2023. 
 
-Going from all of NY to all of FL
-`
-```{r}
 
-```
+
+A graph that gives month my month differences between the total passengers flying LGA->MIA and those flying MIA->LGA
 
 ```{r}
 dfLGA_MIA = dfLGA |>
-  filter((origin == "MIA" | dest == "MIA") , passengers > 0) |>
-  mutate(time_year = year + month / 12)
+  mutate(by_month = ym(str_c(year,"-",month))) |> 
+  filter(dest == "MIA" | origin == "MIA")|>
+  group_by(origin, by_month) |>
+  summarise(passengers = sum(passengers)) |>
+  mutate(cum_pass = cumsum(passengers)) |> 
+  pivot_wider(names_from = origin, values_from = c("passengers", "cum_pass")) |>
+  mutate(net_to_miami = passengers_LGA - passengers_MIA, cum_to_miami = cum_pass_LGA - cum_pass_MIA) 
 
-dfLGA_MIA |>
-  group_by(origin, month) |>
-  summarise(total_passengers = sum(passengers)) |>
-  ggplot(aes(x = month, y = total_passengers)) + geom_line()
 
-`````
+ggplot() + geom_line(dfLGA_MIA_cum, mapping = aes(x = by_month, y = cum_pass_LGA), color = "red") + geom_line(dfLGA_MIA_cum, mapping = aes(x = by_month, y = cum_pass_MIA)) 
 
+
+
+ggplot() + geom_line(dfLGA_MIA, mapping = aes(x = by_month, y = passengers_LGA, color = "LGA"), size = 1.2) + geom_line(dfLGA_MIA, mapping = aes(x = by_month, y = passengers_MIA, color = "MIA"), size = 1.2) + labs(title = "Passengers between LaGuardia Airport and Miami Airport by Month", x = "Passengers", y = "Month") + labs(color = "Flights")
+```
+
+
+
+A graph that plots a CUMMULATIVE SUM of those monthly totals
+
+```{r}
+
+dfLGA_MIA_cum = dfLGA |>
+  mutate(by_month = ym(str_c(year,"-",month))) |> 
+  filter(dest == "MIA" | origin == "MIA")|>
+  group_by(origin, by_month) |>
+  summarise(passengers = sum(passengers)) |>
+  mutate(cum_pass = cumsum(passengers)) |> 
+  pivot_wider(names_from = origin, values_from = c("passengers", "cum_pass")) |>
+  mutate(net_to_miami = passengers_LGA - passengers_MIA, cum_to_miami = cum_pass_LGA - cum_pass_MIA) 
+
+ggplot() + geom_line(dfLGA_MIA_cum, mapping = aes(x = by_month, y = cum_pass_LGA, color = "LGA")) + geom_line(dfLGA_MIA_cum, mapping = aes(x = by_month, y = cum_pass_MIA, color = "MIA")) + labs(title = "Cumulative Sum of Passengers to MIA and LGA", x = "Months", y = " Number of Passengers")
+```
+
+
+
+This graph shows the net amount of passengers to Miami over time.
+```{r}
+ggplot() + geom_line(dfLGA_MIA_cum, mapping = aes(x = by_month, y = net_to_miami)) +labs(title = "Net Number of Passengers to Miami Over Time (months)", x = "Months", y = "Number of Passengers")
+```
